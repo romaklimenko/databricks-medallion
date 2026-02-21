@@ -1,0 +1,13 @@
+resources:
+  jobs:
+    setup:
+      name: "[${var.environment}] medallion-setup"
+      tags:
+        project: medallion
+        approach: setup
+      tasks:
+        - task_key: upload_data
+          notebook_task:
+            notebook_path: ../setup/upload_data.py
+            base_parameters:
+              catalog_name: ${var.catalog_name}
