@@ -25,7 +25,7 @@ User preferences: `uv` for package management, README/docs updated after each ta
 
 ---
 
-## Task 2: Setup Workflow (Schemas + Data Upload)
+## Task 2: Setup Workflow (Schemas + Data Upload) ✅
 
 **Files to create:** `setup/create_schemas.sql`, `setup/upload_data.py`
 **Files to modify:** `databricks.yml` (add setup job), `README.md`

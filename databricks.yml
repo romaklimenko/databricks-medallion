@@ -3,7 +3,7 @@ bundle:
 
 variables:
   catalog_name:
-    default: medallion_comparison
+    default: medallion
     description: Unity Catalog catalog name
   environment:
     default: dev
@@ -11,11 +11,57 @@ variables:
 
 workspace:
   host: https://adb-7405619682376916.16.azuredatabricks.net
-  root_path: /Users/${workspace.current_user.user_name}/.bundle/${bundle.name}/${variables.environment}
+  root_path: /Users/${workspace.current_user.userName}/.bundle/${bundle.name}/${var.environment}
 
 sync:
   include:
     - data/**
+
+resources:
+  schemas:
+    landing:
+      name: landing
+      catalog_name: ${var.catalog_name}
+    approach_notebooks:
+      name: approach_notebooks
+      catalog_name: ${var.catalog_name}
+    approach_sql:
+      name: approach_sql
+      catalog_name: ${var.catalog_name}
+    approach_dbt:
+      name: approach_dbt
+      catalog_name: ${var.catalog_name}
+    approach_dpl_sql:
+      name: approach_dpl_sql
+      catalog_name: ${var.catalog_name}
+    approach_dpl_python:
+      name: approach_dpl_python
+      catalog_name: ${var.catalog_name}
+    approach_mv_st:
+      name: approach_mv_st
+      catalog_name: ${var.catalog_name}
+    approach_dlt:
+      name: approach_dlt
+      catalog_name: ${var.catalog_name}
+
+  volumes:
+    raw_files:
+      name: raw_files
+      catalog_name: ${var.catalog_name}
+      schema_name: landing
+
+  jobs:
+    setup:
+      name: "[${var.environment}] medallion-setup"
+      tags:
+        project: medallion
+        approach: setup
+      tasks:
+        - task_key: upload_data
+          notebook_task:
+            notebook_path: ./setup/upload_data.py
+            base_parameters:
+              catalog_name: ${var.catalog_name}
 
 targets:
   dev:

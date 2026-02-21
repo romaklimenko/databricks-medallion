@@ -38,6 +38,8 @@ dim_customer (SCD2)  ←──  fact_order_line  ──→  dim_product (SCD1)
 
 ## Quick Start
 
+> **Note:** Before deploying, create the `medallion` catalog in the Databricks UI (Catalog Explorer → Create Catalog). The setup workflow creates schemas inside it but cannot create the catalog itself.
+
 ```bash
 # Clone and install
 git clone <repo-url>
@@ -88,11 +90,38 @@ After processing both batches, every approach produces:
 | `gold_dim_date` | 91 | Full months Jan–Mar 2024 |
 | `gold_fact_order_line` | 11 | 10 from batch 1 + 1 from batch 2 |
 
+## Setup
+
+Schemas and the landing volume are created automatically by `databricks bundle deploy` (defined as bundle resources). The setup workflow uploads CSV data to the volume:
+
+```bash
+databricks bundle deploy   # creates schemas + volume
+databricks bundle run setup # uploads CSV files
+```
+
+The setup job runs a single task:
+- **upload_data** — copies `data/batch_1/` and `data/batch_2/` CSVs into `/Volumes/{catalog}/landing/raw_files/`
+
+After setup, the volume contains:
+
+```
+raw_files/
+├── batch_1/
+│   ├── customers.csv    (5 rows)
+│   ├── products.csv     (5 rows)
+│   ├── orders.csv       (7 rows)
+│   └── order_lines.csv  (10 rows)
+└── batch_2/
+    ├── customers.csv    (3 rows — 2 updates + 1 new)
+    ├── orders.csv       (2 rows — 1 correction + 1 new)
+    └── order_lines.csv  (1 row)
+```
+
 ## Configuration
 
 Bundle variables (set in `databricks.yml` or override at deploy time):
 
 | Variable | Default | Description |
 |----------|---------|-------------|
-| `catalog_name` | `medallion_comparison` | Unity Catalog catalog |
+| `catalog_name` | `medallion` | Unity Catalog catalog (must be created via UI first) |
 | `environment` | `dev` | Deployment environment |

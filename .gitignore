@@ -27,3 +27,4 @@ logs/
 .idea/
 .vscode/
 *.swp
+*/settings.local.json

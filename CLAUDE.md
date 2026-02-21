@@ -59,7 +59,14 @@ The SCD2 tracking columns for dim_customer are: `valid_from`, `valid_to` (9999-1
 - **Implementation cadence**: one task at a time — review and commit before moving on
 - **Keep it simple**: follow best practices but avoid over-engineering
 
+## Bundle Tagging Convention
+
+Every job and pipeline in `databricks.yml` must have these tags:
+- `project: medallion` — shared across all resources
+- `approach: <name>` — identifies the specific approach (e.g., `setup`, `notebooks`, `sql`, `dbt`, `dpl_sql`, `dpl_python`, `mv_st`, `dlt`, `validate`)
+
 ## Key Design Decisions
 
+- **Catalog name**: `medallion` (default). The catalog must be created manually via the Databricks UI before running the setup workflow — do NOT use `CREATE CATALOG` in notebooks (the workspace requires a managed storage location).
 - **SCD2 dates**: fixed batch convention — batch_1 → `valid_from = 2024-01-01`, batch_2 → `valid_from = 2024-03-01`
 - **DLT column names**: keep native `__START_AT`/`__END_AT` for DLT/Declarative Pipeline approaches, document difference vs `valid_from`/`valid_to`
