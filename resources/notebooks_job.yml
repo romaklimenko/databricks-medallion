@@ -1,0 +1,32 @@
+resources:
+  jobs:
+    approach_notebooks:
+      name: "[${var.environment}] medallion-notebooks"
+      tags:
+        project: medallion
+        approach: notebooks
+      tasks:
+        - task_key: bronze
+          notebook_task:
+            notebook_path: ../src/notebooks/bronze.py
+            base_parameters:
+              catalog_name: ${var.catalog_name}
+              schema: ${resources.schemas.schema_approach_notebooks.name}
+              landing_schema: ${resources.schemas.schema_landing.name}
+              volume_name: ${resources.volumes.raw_files.name}
+        - task_key: silver
+          depends_on:
+            - task_key: bronze
+          notebook_task:
+            notebook_path: ../src/notebooks/silver.py
+            base_parameters:
+              catalog_name: ${var.catalog_name}
+              schema: ${resources.schemas.schema_approach_notebooks.name}
+        - task_key: gold
+          depends_on:
+            - task_key: silver
+          notebook_task:
+            notebook_path: ../src/notebooks/gold.py
+            base_parameters:
+              catalog_name: ${var.catalog_name}
+              schema: ${resources.schemas.schema_approach_notebooks.name}

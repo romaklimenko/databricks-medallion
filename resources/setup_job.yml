@@ -11,3 +11,5 @@ resources:
             notebook_path: ../setup/upload_data.py
             base_parameters:
               catalog_name: ${var.catalog_name}
+              landing_schema: ${resources.schemas.schema_landing.name}
+              volume_name: ${resources.volumes.raw_files.name}

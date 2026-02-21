@@ -21,7 +21,7 @@ dim_customer (SCD2)  ←──  fact_order_line  ──→  dim_product (SCD1)
 
 | # | Approach | Schema | SCD2 Method | Status |
 |---|----------|--------|-------------|--------|
-| 1 | Python Notebooks | `approach_notebooks` | Manual MERGE with DataFrames | Planned |
+| 1 | Python Notebooks | `approach_notebooks` | Manual MERGE with DataFrames | Done |
 | 2 | SQL with COPY INTO | `approach_sql` | MERGE INTO | Planned |
 | 3 | Materialized Views + Streaming Tables | `approach_mv_st` | Scheduled MERGE workaround | Planned |
 | 4 | Declarative Pipelines (SQL) | `approach_dpl_sql` | APPLY CHANGES INTO | Planned |
@@ -116,6 +116,22 @@ raw_files/
     ├── orders.csv       (2 rows — 1 correction + 1 new)
     └── order_lines.csv  (1 row)
 ```
+
+## Approach Details
+
+### Approach 1: Python Notebooks
+
+Three PySpark notebooks in [src/notebooks/](src/notebooks/) implementing the full medallion pipeline:
+
+- **bronze.py** — Reads CSVs from the landing volume using glob patterns (`batch_*/*.csv`). All columns kept as strings. Adds `_source_file`, `_ingested_at`, and `_batch_id` metadata.
+- **silver.py** — Deduplicates (latest batch wins via `row_number` window), casts types, standardizes text (country → upper, email → lower, segment → initcap), and computes `line_amount`.
+- **gold.py** — Builds the Kimball dimensional model:
+  - `dim_product` — SCD1, latest version from silver
+  - `dim_date` — Generated from order date range, padded to full months (Jan–Mar 2024 = 91 days)
+  - `dim_customer` — SCD2 implemented manually by comparing batch_1 vs batch_2 customer snapshots from bronze, producing historical + current rows with `valid_from`/`valid_to`/`is_current`
+  - `fact_order_line` — Joins silver order lines/orders to dimension tables; customer FK uses SCD2 date-range lookup
+
+Run: `databricks bundle run approach_notebooks`
 
 ## Configuration
 

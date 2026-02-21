@@ -1,27 +1,27 @@
 resources:
   schemas:
-    landing:
+    schema_landing:
       name: landing
       catalog_name: ${var.catalog_name}
-    approach_notebooks:
+    schema_approach_notebooks:
       name: approach_notebooks
       catalog_name: ${var.catalog_name}
-    approach_sql:
+    schema_approach_sql:
       name: approach_sql
       catalog_name: ${var.catalog_name}
-    approach_dbt:
+    schema_approach_dbt:
       name: approach_dbt
       catalog_name: ${var.catalog_name}
-    approach_dpl_sql:
+    schema_approach_dpl_sql:
       name: approach_dpl_sql
       catalog_name: ${var.catalog_name}
-    approach_dpl_python:
+    schema_approach_dpl_python:
       name: approach_dpl_python
       catalog_name: ${var.catalog_name}
-    approach_mv_st:
+    schema_approach_mv_st:
       name: approach_mv_st
       catalog_name: ${var.catalog_name}
-    approach_dlt:
+    schema_approach_dlt:
       name: approach_dlt
       catalog_name: ${var.catalog_name}
 
@@ -29,4 +29,4 @@ resources:
     raw_files:
       name: raw_files
       catalog_name: ${var.catalog_name}
-      schema_name: landing
+      schema_name: ${resources.schemas.schema_landing.name}

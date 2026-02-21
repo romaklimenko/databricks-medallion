@@ -9,14 +9,19 @@
 # COMMAND ----------
 
 dbutils.widgets.text("catalog_name", "medallion")
+dbutils.widgets.text("landing_schema", "landing")
+dbutils.widgets.text("volume_name", "raw_files")
+
 catalog = dbutils.widgets.get("catalog_name")
+landing_schema = dbutils.widgets.get("landing_schema")
+volume_name = dbutils.widgets.get("volume_name")
 
 # COMMAND ----------
 
 import os
 import shutil
 
-volume_path = f"/Volumes/{catalog}/landing/raw_files"
+volume_path = f"/Volumes/{catalog}/{landing_schema}/{volume_name}"
 
 # Bundle syncs data/ into the workspace. Resolve path relative to this notebook.
 notebook_path = (
