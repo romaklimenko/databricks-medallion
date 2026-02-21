@@ -1,0 +1,13 @@
+[project]
+name = "databricks-medallion-comparison"
+version = "0.1.0"
+description = "Comparing 7 approaches to Databricks Medallion Architecture (Bronze-Silver-Gold)"
+requires-python = ">=3.10"
+dependencies = []
+
+[project.optional-dependencies]
+dbt = ["dbt-databricks>=1.8"]
+
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"

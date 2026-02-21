@@ -51,3 +51,15 @@ The SCD2 tracking columns for dim_customer are: `valid_from`, `valid_to` (9999-1
    - `gold_dim_date`: covers Jan–Mar 2024 (full months)
    - `gold_fact_order_line`: 11 rows
 5. `validate.sql` confirms cross-approach consistency
+
+## Workflow Preferences
+
+- **Package manager**: use `uv` (not pip/poetry)
+- **Documentation**: update `README.md` after every feature/approach is implemented
+- **Implementation cadence**: one task at a time — review and commit before moving on
+- **Keep it simple**: follow best practices but avoid over-engineering
+
+## Key Design Decisions
+
+- **SCD2 dates**: fixed batch convention — batch_1 → `valid_from = 2024-01-01`, batch_2 → `valid_from = 2024-03-01`
+- **DLT column names**: keep native `__START_AT`/`__END_AT` for DLT/Declarative Pipeline approaches, document difference vs `valid_from`/`valid_to`

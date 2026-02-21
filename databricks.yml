@@ -1,0 +1,25 @@
+bundle:
+  name: medallion-comparison
+
+variables:
+  catalog_name:
+    default: medallion_comparison
+    description: Unity Catalog catalog name
+  environment:
+    default: dev
+    description: Deployment environment
+
+workspace:
+  host: https://adb-7405619682376916.16.azuredatabricks.net
+  root_path: /Users/${workspace.current_user.user_name}/.bundle/${bundle.name}/${variables.environment}
+
+sync:
+  include:
+    - data/**
+
+targets:
+  dev:
+    mode: development
+    default: true
+  prod:
+    mode: production
