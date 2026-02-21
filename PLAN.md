@@ -62,7 +62,7 @@ SCD2 strategy: compare batch_1 vs batch_2 customer snapshots from bronze, build 
 
 ---
 
-## Task 5: Approach 3 — Materialized Views + Streaming Tables
+## Task 5: Approach 3 — Materialized Views + Streaming Tables ✅
 
 **Files to create:** `src/mv_st/setup.sql`, `src/mv_st/scd2_merge.sql`
 **Files to modify:** `databricks.yml`, `README.md`

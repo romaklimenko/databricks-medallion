@@ -11,6 +11,10 @@ variables:
   environment:
     default: dev
     description: Deployment environment
+  warehouse_id:
+    description: SQL warehouse ID (required for MV/ST approach)
+    lookup:
+      warehouse: Serverless Starter Warehouse
 
 workspace:
   host: https://adb-7405619682376916.16.azuredatabricks.net

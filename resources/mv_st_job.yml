@@ -1,0 +1,26 @@
+resources:
+  jobs:
+    approach_mv_st:
+      name: "[${var.environment}] medallion-mv-st"
+      tags:
+        project: medallion
+        approach: mv_st
+      tasks:
+        - task_key: setup
+          notebook_task:
+            notebook_path: ../src/mv_st/setup.sql
+            warehouse_id: ${var.warehouse_id}
+            base_parameters:
+              catalog_name: ${var.catalog_name}
+              schema: ${resources.schemas.schema_approach_mv_st.name}
+              landing_schema: ${resources.schemas.schema_landing.name}
+              volume_name: ${resources.volumes.raw_files.name}
+        - task_key: scd2_merge
+          depends_on:
+            - task_key: setup
+          notebook_task:
+            notebook_path: ../src/mv_st/scd2_merge.sql
+            warehouse_id: ${var.warehouse_id}
+            base_parameters:
+              catalog_name: ${var.catalog_name}
+              schema: ${resources.schemas.schema_approach_mv_st.name}

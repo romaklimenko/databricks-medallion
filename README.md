@@ -23,7 +23,7 @@ dim_customer (SCD2)  ←──  fact_order_line  ──→  dim_product (SCD1)
 |---|----------|--------|-------------|--------|
 | 1 | Python Notebooks | `approach_notebooks` | Manual MERGE with DataFrames | Done |
 | 2 | SQL with COPY INTO | `approach_sql` | MERGE INTO | Done |
-| 3 | Materialized Views + Streaming Tables | `approach_mv_st` | Scheduled MERGE workaround | Planned |
+| 3 | Materialized Views + Streaming Tables | `approach_mv_st` | Scheduled MERGE workaround | Done |
 | 4 | Declarative Pipelines (SQL) | `approach_dpl_sql` | APPLY CHANGES INTO | Planned |
 | 5 | Declarative Pipelines (Python) | `approach_dpl_python` | dlt.apply_changes() | Planned |
 | 6 | Delta Live Tables | `approach_dlt` | APPLY CHANGES | Planned |
@@ -146,6 +146,22 @@ Three SQL notebooks in [src/sql/](src/sql/) implementing the full medallion pipe
   - `fact_order_line` — Joins silver tables to dimensions; customer FK uses SCD2 date-range lookup
 
 Run: `databricks bundle run approach_sql`
+
+### Approach 3: Materialized Views + Streaming Tables
+
+Two SQL notebooks in [src/mv_st/](src/mv_st/) using standalone streaming tables and materialized views — the simplest declarative approach:
+
+- **setup.sql** — Creates the full pipeline declaratively:
+  - **Bronze**: 4 streaming tables using `CREATE OR REFRESH STREAMING TABLE` with `STREAM read_files()` (Auto Loader under the hood)
+  - **Silver**: 4 materialized views with `CREATE OR REPLACE MATERIALIZED VIEW` — dedup, type casting, standardization, `line_amount` derivation
+  - **Gold**: `dim_product` and `dim_date` as materialized views
+- **scd2_merge.sql** — SCD2 workaround (MVs cannot natively implement SCD2):
+  - `dim_customer` built as a regular table using the same batch-comparison CTE approach
+  - `fact_order_line` as a materialized view joining silver MVs to dimension tables
+
+**Limitation**: Materialized views don't support SCD2 natively. The `dim_customer` dimension requires a scheduled MERGE notebook as a workaround.
+
+Run: `databricks bundle run approach_mv_st`
 
 ## Configuration
 
