@@ -36,7 +36,7 @@ User preferences: `uv` for package management, README/docs updated after each ta
 
 ---
 
-## Task 3: Approach 1 — Python Notebooks
+## Task 3: Approach 1 — Python Notebooks ✅
 
 **Files to create:** `src/notebooks/bronze.py`, `src/notebooks/silver.py`, `src/notebooks/gold.py`
 **Files to modify:** `databricks.yml`, `README.md`
@@ -50,7 +50,7 @@ SCD2 strategy: compare batch_1 vs batch_2 customer snapshots from bronze, build 
 
 ---
 
-## Task 4: Approach 2 — SQL with COPY INTO
+## Task 4: Approach 2 — SQL with COPY INTO ✅
 
 **Files to create:** `src/sql/bronze.sql`, `src/sql/silver.sql`, `src/sql/gold.sql`
 **Files to modify:** `databricks.yml`, `README.md`

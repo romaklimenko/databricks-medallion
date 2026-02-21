@@ -22,7 +22,7 @@ dim_customer (SCD2)  ←──  fact_order_line  ──→  dim_product (SCD1)
 | # | Approach | Schema | SCD2 Method | Status |
 |---|----------|--------|-------------|--------|
 | 1 | Python Notebooks | `approach_notebooks` | Manual MERGE with DataFrames | Done |
-| 2 | SQL with COPY INTO | `approach_sql` | MERGE INTO | Planned |
+| 2 | SQL with COPY INTO | `approach_sql` | MERGE INTO | Done |
 | 3 | Materialized Views + Streaming Tables | `approach_mv_st` | Scheduled MERGE workaround | Planned |
 | 4 | Declarative Pipelines (SQL) | `approach_dpl_sql` | APPLY CHANGES INTO | Planned |
 | 5 | Declarative Pipelines (Python) | `approach_dpl_python` | dlt.apply_changes() | Planned |
@@ -132,6 +132,20 @@ Three PySpark notebooks in [src/notebooks/](src/notebooks/) implementing the ful
   - `fact_order_line` — Joins silver order lines/orders to dimension tables; customer FK uses SCD2 date-range lookup
 
 Run: `databricks bundle run approach_notebooks`
+
+### Approach 2: SQL with COPY INTO
+
+Three SQL notebooks in [src/sql/](src/sql/) implementing the full medallion pipeline using pure SQL:
+
+- **bronze.sql** — Uses `COPY INTO` to ingest CSVs from the landing volume into Delta tables. Adds `_source_file`, `_ingested_at`, and `_batch_id` metadata via `_metadata.file_path`.
+- **silver.sql** — `CREATE OR REPLACE TABLE AS SELECT` with CTE-based deduplication (latest batch wins via `ROW_NUMBER`), type casting, text standardization, and `line_amount` derivation.
+- **gold.sql** — Builds the Kimball dimensional model entirely in SQL:
+  - `dim_product` — SCD1, simple SELECT from silver
+  - `dim_date` — Generated via `SEQUENCE()` + `LATERAL VIEW EXPLODE`, padded to full months
+  - `dim_customer` — SCD2 built by comparing batch_1 vs batch_2 with CTEs (`LEFT ANTI JOIN` for unchanged/new, `INNER JOIN` with change detection for historical/current)
+  - `fact_order_line` — Joins silver tables to dimensions; customer FK uses SCD2 date-range lookup
+
+Run: `databricks bundle run approach_sql`
 
 ## Configuration
 
