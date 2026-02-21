@@ -1,0 +1,6 @@
+product_id,product_name,category,subcategory,unit_price
+101,Widget A,Electronics,Gadgets,29.99
+102,Widget B,Electronics,Accessories,14.99
+103,Gizmo X,Home,Kitchen,49.99
+104,Gizmo Y,Home,Garden,34.99
+105,Thingamajig,Office,Supplies,9.99

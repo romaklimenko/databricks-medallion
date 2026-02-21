@@ -1,0 +1,6 @@
+customer_id,customer_name,email,address,city,country,segment
+1,Alice Johnson,alice@example.com,123 Main St,Copenhagen,Denmark,Premium
+2,Bob Smith,bob@example.com,456 Oak Ave,Stockholm,Sweden,Standard
+3,Carol Williams,carol@example.com,789 Pine Rd,Oslo,Norway,Premium
+4,David Brown,david@example.com,321 Elm St,Helsinki,Finland,Standard
+5,Eva Martinez,eva@example.com,654 Birch Ln,Copenhagen,Denmark,Premium

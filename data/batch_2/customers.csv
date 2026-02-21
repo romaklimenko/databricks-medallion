@@ -1,0 +1,4 @@
+customer_id,customer_name,email,address,city,country,segment
+2,Bob Smith,bob.smith@newmail.com,456 Oak Ave,Stockholm,Sweden,Premium
+5,Eva Martinez,eva@example.com,100 New Street,Aarhus,Denmark,Premium
+6,Frank Lee,frank@example.com,200 Maple Dr,Gothenburg,Sweden,Standard
