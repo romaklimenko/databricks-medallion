@@ -24,7 +24,7 @@ dim_customer (SCD2)  ←──  fact_order_line  ──→  dim_product (SCD1)
 | 1 | Python Notebooks | `approach_notebooks` | Manual MERGE with DataFrames | Done |
 | 2 | SQL with COPY INTO | `approach_sql` | MERGE INTO | Done |
 | 3 | Materialized Views + Streaming Tables | `approach_mv_st` | Scheduled MERGE workaround | Done |
-| 4 | Declarative Pipelines (SQL) | `approach_dpl_sql` | APPLY CHANGES INTO | Planned |
+| 4 | Declarative Pipelines (SQL) | `approach_dpl_sql` | APPLY CHANGES INTO | Done |
 | 5 | Declarative Pipelines (Python) | `approach_dpl_python` | dlt.apply_changes() | Planned |
 | 6 | Delta Live Tables | `approach_dlt` | APPLY CHANGES | Planned |
 | 7 | dbt-core | `approach_dbt` | dbt snapshots | Planned |
@@ -162,6 +162,22 @@ Two SQL notebooks in [src/mv_st/](src/mv_st/) using standalone streaming tables 
 **Limitation**: Materialized views don't support SCD2 natively. The `dim_customer` dimension requires a scheduled MERGE notebook as a workaround.
 
 Run: `databricks bundle run approach_mv_st`
+
+### Approach 4: Declarative Pipelines (SQL)
+
+A single SQL file in [src/dpl_sql/](src/dpl_sql/) defining a complete Declarative Pipeline (formerly DLT):
+
+- **Bronze**: 4 streaming tables using `CREATE OR REFRESH STREAMING TABLE` with `STREAM read_files()` — same ingestion pattern as Approach 3 but managed by the pipeline runtime
+- **Silver**: 4 materialized views with **data quality expectations** (`CONSTRAINT ... EXPECT ... ON VIOLATION DROP ROW`) — dedup, type casting, standardization, `line_amount` derivation
+- **Gold**:
+  - `dim_customer` — SCD2 via `APPLY CHANGES INTO ... STORED AS SCD TYPE 2` with `TRACK HISTORY ON` limited to email, address, city, country, segment. An internal streaming table (`_scd2_dim_customer`) holds the raw SCD2 data; a MV wraps it to add `customer_sk`
+  - `dim_product` — SCD1, materialized view from silver
+  - `dim_date` — Generated from order date range, padded to full months
+  - `fact_order_line` — Joins silver tables to dimensions with SCD2 range join
+
+**Key difference from other approaches**: APPLY CHANGES produces `__START_AT`/`__END_AT` columns instead of `valid_from`/`valid_to`. `__END_AT` is `NULL` for current records (not `9999-12-31`). The fact table join uses `order_date >= __START_AT AND (__END_AT IS NULL OR order_date < __END_AT)`.
+
+Run: `databricks bundle run approach_dpl_sql`
 
 ## Configuration
 

@@ -1,0 +1,16 @@
+resources:
+  pipelines:
+    approach_dpl_sql:
+      name: "[${var.environment}] medallion-dpl-sql"
+      catalog: ${var.catalog_name}
+      target: ${resources.schemas.schema_approach_dpl_sql.name}
+      serverless: true
+      libraries:
+        - notebook:
+            path: ../src/dpl_sql/pipeline.sql
+      configuration:
+        catalog_name: ${var.catalog_name}
+        landing_schema: ${resources.schemas.schema_landing.name}
+        volume_name: ${resources.volumes.raw_files.name}
+      # Note: pipelines don't support tags in the Databricks API.
+      # Approach identification is embedded in the pipeline name instead.
