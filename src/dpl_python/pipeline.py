@@ -1,11 +1,11 @@
 # Databricks notebook source
 # Approach 5: Declarative Pipelines (Python)
 # Full medallion pipeline defined as a single Declarative Pipeline using the Python API.
-# Bronze: streaming tables via Auto Loader (@dlt.table with readStream)
-# Silver: materialized views with expectations (@dlt.expect_or_drop)
-# Gold: dim_customer via dlt.apply_changes() (SCD TYPE 2), other dims + fact as MVs
+# Bronze: streaming tables via Auto Loader (@dp.table with readStream)
+# Silver: materialized views with expectations (@dp.expect_or_drop)
+# Gold: dim_customer via create_auto_cdc_flow() (SCD TYPE 2), other dims + fact as MVs
 #
-# Note: APPLY CHANGES produces __START_AT/__END_AT columns instead of
+# Note: AUTO CDC produces __START_AT/__END_AT columns instead of
 # valid_from/valid_to. __END_AT is NULL for current records (not 9999-12-31).
 #
 # Pipeline configuration keys (set in bundle YAML):
@@ -13,7 +13,7 @@
 
 # COMMAND ----------
 
-import dlt
+from pyspark import pipelines as dp
 from pyspark.sql import functions as F
 from pyspark.sql.window import Window
 
@@ -29,7 +29,7 @@ volume_path = f"/Volumes/{catalog_name}/{landing_schema}/{volume_name}"
 # =============================================
 
 
-@dlt.table(name="bronze_customers", comment="Raw customers from landing volume")
+@dp.table(name="bronze_customers", comment="Raw customers from landing volume")
 def bronze_customers():
     return (
         spark.readStream.format("cloudFiles")
@@ -49,7 +49,7 @@ def bronze_customers():
 # COMMAND ----------
 
 
-@dlt.table(name="bronze_products", comment="Raw products from landing volume")
+@dp.table(name="bronze_products", comment="Raw products from landing volume")
 def bronze_products():
     return (
         spark.readStream.format("cloudFiles")
@@ -69,7 +69,7 @@ def bronze_products():
 # COMMAND ----------
 
 
-@dlt.table(name="bronze_orders", comment="Raw orders from landing volume")
+@dp.table(name="bronze_orders", comment="Raw orders from landing volume")
 def bronze_orders():
     return (
         spark.readStream.format("cloudFiles")
@@ -89,7 +89,7 @@ def bronze_orders():
 # COMMAND ----------
 
 
-@dlt.table(name="bronze_order_lines", comment="Raw order lines from landing volume")
+@dp.table(name="bronze_order_lines", comment="Raw order lines from landing volume")
 def bronze_order_lines():
     return (
         spark.readStream.format("cloudFiles")
@@ -113,12 +113,12 @@ def bronze_order_lines():
 # =============================================
 
 
-@dlt.table(name="silver_customers")
-@dlt.expect_or_drop("valid_customer_id", "customer_id IS NOT NULL")
+@dp.table(name="silver_customers")
+@dp.expect_or_drop("valid_customer_id", "customer_id IS NOT NULL")
 def silver_customers():
     w = Window.partitionBy("customer_id").orderBy(F.desc("_batch_id"))
     return (
-        dlt.read("bronze_customers")
+        dp.read("bronze_customers")
         .withColumn("_rn", F.row_number().over(w))
         .filter(F.col("_rn") == 1)
         .select(
@@ -136,12 +136,12 @@ def silver_customers():
 # COMMAND ----------
 
 
-@dlt.table(name="silver_products")
-@dlt.expect_or_drop("valid_product_id", "product_id IS NOT NULL")
+@dp.table(name="silver_products")
+@dp.expect_or_drop("valid_product_id", "product_id IS NOT NULL")
 def silver_products():
     w = Window.partitionBy("product_id").orderBy(F.desc("_batch_id"))
     return (
-        dlt.read("bronze_products")
+        dp.read("bronze_products")
         .withColumn("_rn", F.row_number().over(w))
         .filter(F.col("_rn") == 1)
         .select(
@@ -157,12 +157,12 @@ def silver_products():
 # COMMAND ----------
 
 
-@dlt.table(name="silver_orders")
-@dlt.expect_or_drop("valid_order_id", "order_id IS NOT NULL")
+@dp.table(name="silver_orders")
+@dp.expect_or_drop("valid_order_id", "order_id IS NOT NULL")
 def silver_orders():
     w = Window.partitionBy("order_id").orderBy(F.desc("_batch_id"))
     return (
-        dlt.read("bronze_orders")
+        dp.read("bronze_orders")
         .withColumn("_rn", F.row_number().over(w))
         .filter(F.col("_rn") == 1)
         .select(
@@ -177,12 +177,12 @@ def silver_orders():
 # COMMAND ----------
 
 
-@dlt.table(name="silver_order_lines")
-@dlt.expect_or_drop("valid_order_line_id", "order_id IS NOT NULL AND line_id IS NOT NULL")
+@dp.table(name="silver_order_lines")
+@dp.expect_or_drop("valid_order_line_id", "order_id IS NOT NULL AND line_id IS NOT NULL")
 def silver_order_lines():
     w = Window.partitionBy("order_id", "line_id").orderBy(F.desc("_batch_id"))
     return (
-        dlt.read("bronze_order_lines")
+        dp.read("bronze_order_lines")
         .withColumn("_rn", F.row_number().over(w))
         .filter(F.col("_rn") == 1)
         .select(
@@ -208,14 +208,14 @@ def silver_order_lines():
 # Gold Layer
 # =============================================
 
-# ----- SCD2: dim_customer via dlt.apply_changes() -----
+# ----- SCD2: dim_customer via create_auto_cdc_flow() -----
 # A temporary streaming view provides the cleaned/typed source with _batch_date.
-# The APPLY CHANGES target is an internal streaming table. A downstream MV
+# The AUTO CDC target is an internal streaming table. A downstream MV
 # wraps it to add customer_sk.
 # track_history_column_list limits SCD2 triggers to the same columns as other approaches.
 
 
-@dlt.view(name="_scd2_customers_input")
+@dp.view(name="_scd2_customers_input")
 def _scd2_customers_input():
     return (
         spark.readStream.format("cloudFiles")
@@ -240,9 +240,9 @@ def _scd2_customers_input():
     )
 
 
-dlt.create_streaming_table(name="_scd2_dim_customer")
+dp.create_streaming_table(name="_scd2_dim_customer")
 
-dlt.apply_changes(
+dp.create_auto_cdc_flow(
     target="_scd2_dim_customer",
     source="_scd2_customers_input",
     keys=["customer_id"],
@@ -260,11 +260,11 @@ dlt.apply_changes(
 #   __END_AT   = when superseded (DATE), None for current records
 
 
-@dlt.table(name="gold_dim_customer")
+@dp.table(name="gold_dim_customer")
 def gold_dim_customer():
     w = Window.orderBy("customer_id", "__START_AT")
     return (
-        dlt.read("_scd2_dim_customer")
+        dp.read("_scd2_dim_customer")
         .select(
             F.row_number().over(w).alias("customer_sk"),
             "customer_id", "customer_name", "email",
@@ -279,11 +279,11 @@ def gold_dim_customer():
 # ----- dim_product (SCD1) -----
 
 
-@dlt.table(name="gold_dim_product")
+@dp.table(name="gold_dim_product")
 def gold_dim_product():
     w = Window.orderBy("product_id")
     return (
-        dlt.read("silver_products")
+        dp.read("silver_products")
         .select(
             F.row_number().over(w).alias("product_sk"),
             "product_id", "product_name", "category", "subcategory", "unit_price",
@@ -296,9 +296,9 @@ def gold_dim_product():
 # ----- dim_date (generated from order date range, padded to full months) -----
 
 
-@dlt.table(name="gold_dim_date")
+@dp.table(name="gold_dim_date")
 def gold_dim_date():
-    orders = dlt.read("silver_orders")
+    orders = dp.read("silver_orders")
     date_range = orders.agg(
         F.date_trunc("month", F.min("order_date")).alias("min_date"),
         F.last_day(F.max("order_date")).alias("max_date"),
@@ -329,12 +329,12 @@ def gold_dim_date():
 # Note: __END_AT equals the __START_AT of the next version, so we use < (not <=).
 
 
-@dlt.table(name="gold_fact_order_line")
+@dp.table(name="gold_fact_order_line")
 def gold_fact_order_line():
-    ol = dlt.read("silver_order_lines")
-    o = dlt.read("silver_orders")
-    dc = dlt.read("gold_dim_customer")
-    dp = dlt.read("gold_dim_product")
+    ol = dp.read("silver_order_lines")
+    o = dp.read("silver_orders")
+    dc = dp.read("gold_dim_customer")
+    dim_prod = dp.read("gold_dim_product")
 
     # Join order lines with orders (order_id is the join key)
     ol_with_order = ol.join(o, "order_id")
@@ -350,10 +350,10 @@ def gold_fact_order_line():
 
     # Join with dim_product
     with_prod = with_cust.join(
-        dp,
-        with_cust["product_id"] == dp["product_id"],
+        dim_prod,
+        with_cust["product_id"] == dim_prod["product_id"],
         "left",
-    ).select(with_cust["*"], dp["product_sk"])
+    ).select(with_cust["*"], dim_prod["product_sk"])
 
     w = Window.orderBy("order_id", "line_id")
     return with_prod.select(

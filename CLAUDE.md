@@ -34,8 +34,8 @@ This is the most critical piece to get right. Each approach handles it different
 | Notebooks | Manual MERGE with DataFrame API |
 | SQL | MERGE INTO with SCD2 logic |
 | dbt | dbt snapshots |
-| Declarative Pipelines SQL | APPLY CHANGES INTO ... STORED AS SCD TYPE 2 |
-| Declarative Pipelines Python | dlt.apply_changes() with stored_as_scd_type=2 |
+| Declarative Pipelines SQL | AUTO CDC INTO ... STORED AS SCD TYPE 2 |
+| Declarative Pipelines Python | create_auto_cdc_flow() with stored_as_scd_type=2 |
 | MV + Streaming Tables | Acknowledge limitation, use scheduled MERGE workaround |
 | DLT | APPLY CHANGES with SCD TYPE 2 |
 

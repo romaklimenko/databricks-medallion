@@ -59,8 +59,8 @@ erDiagram
 | 1 | Python Notebooks | `approach_notebooks` | Manual MERGE with DataFrames | Done |
 | 2 | SQL with COPY INTO | `approach_sql` | MERGE INTO | Done |
 | 3 | Materialized Views + Streaming Tables | `approach_mv_st` | Scheduled MERGE workaround | Done |
-| 4 | Declarative Pipelines (SQL) | `approach_dpl_sql` | APPLY CHANGES INTO | Done |
-| 5 | Declarative Pipelines (Python) | `approach_dpl_python` | dlt.apply_changes() | Done |
+| 4 | Declarative Pipelines (SQL) | `approach_dpl_sql` | AUTO CDC INTO | Done |
+| 5 | Declarative Pipelines (Python) | `approach_dpl_python` | create_auto_cdc_flow() | Done |
 | 6 | Delta Live Tables | `approach_dlt` | APPLY CHANGES | Done |
 | 7 | dbt-core | `approach_dbt` | dbt snapshots | Done |
 
@@ -216,12 +216,12 @@ A single SQL file in [src/dpl_sql/](src/dpl_sql/) defining a complete Declarativ
 - **Bronze**: 4 streaming tables using `CREATE OR REFRESH STREAMING TABLE` with `STREAM read_files()` — same ingestion pattern as Approach 3 but managed by the pipeline runtime
 - **Silver**: 4 materialized views with **data quality expectations** (`CONSTRAINT ... EXPECT ... ON VIOLATION DROP ROW`) — dedup, type casting, standardization, `line_amount` derivation
 - **Gold**:
-  - `dim_customer` — SCD2 via `APPLY CHANGES INTO ... STORED AS SCD TYPE 2` with `TRACK HISTORY ON` limited to email, address, city, country, segment. An internal streaming table (`_scd2_dim_customer`) holds the raw SCD2 data; a MV wraps it to add `customer_sk`
+  - `dim_customer` — SCD2 via `AUTO CDC INTO ... STORED AS SCD TYPE 2` with `TRACK HISTORY ON` limited to email, address, city, country, segment. An internal streaming table (`_scd2_dim_customer`) holds the raw SCD2 data; a MV wraps it to add `customer_sk`
   - `dim_product` — SCD1, materialized view from silver
   - `dim_date` — Generated from order date range, padded to full months
   - `fact_order_line` — Joins silver tables to dimensions with SCD2 range join
 
-**Key difference from other approaches**: APPLY CHANGES produces `__START_AT`/`__END_AT` columns instead of `valid_from`/`valid_to`. `__END_AT` is `NULL` for current records (not `9999-12-31`). The fact table join uses `order_date >= __START_AT AND (__END_AT IS NULL OR order_date < __END_AT)`.
+**Key difference from other approaches**: AUTO CDC produces `__START_AT`/`__END_AT` columns instead of `valid_from`/`valid_to`. `__END_AT` is `NULL` for current records (not `9999-12-31`). The fact table join uses `order_date >= __START_AT AND (__END_AT IS NULL OR order_date < __END_AT)`.
 
 Run: `databricks bundle run approach_dpl_sql`
 
@@ -232,7 +232,7 @@ A single Python file in [src/dpl_python/](src/dpl_python/) defining a complete D
 - **Bronze**: 4 streaming tables using `@dlt.table` with `spark.readStream.format("cloudFiles")` (Auto Loader)
 - **Silver**: 4 materialized views with `@dlt.expect_or_drop()` data quality expectations — dedup via PySpark `Window` + `row_number()`, type casting, standardization, `line_amount` derivation
 - **Gold**:
-  - `dim_customer` — SCD2 via `dlt.apply_changes()` with `stored_as_scd_type=2` and `track_history_column_list` limited to email, address, city, country, segment. A temporary streaming view feeds cleaned data; a MV wraps the SCD2 target to add `customer_sk`
+  - `dim_customer` — SCD2 via `create_auto_cdc_flow()` with `stored_as_scd_type=2` and `track_history_column_list` limited to email, address, city, country, segment. A temporary streaming view feeds cleaned data; a MV wraps the SCD2 target to add `customer_sk`
   - `dim_product` — SCD1, materialized view from silver
   - `dim_date` — Generated from order date range, padded to full months
   - `fact_order_line` — PySpark DataFrame joins with SCD2 range join
@@ -249,6 +249,7 @@ A single SQL file in [src/dlt/](src/dlt/) using the **classic DLT SQL syntax** �
 |---|---|
 | `CREATE OR REFRESH STREAMING TABLE` | `CREATE STREAMING LIVE TABLE` |
 | `CREATE OR REFRESH MATERIALIZED VIEW` | `CREATE LIVE TABLE` |
+| `CREATE FLOW ... AS AUTO CDC INTO` | `APPLY CHANGES INTO` |
 
 - **Bronze**: 4 streaming live tables from `STREAM read_files()`
 - **Silver**: 4 live tables with expectations — same dedup/transform logic as all other approaches
@@ -306,7 +307,7 @@ Run: `databricks bundle run validate`
 | **Language** | PySpark | SQL | SQL | SQL | Python | SQL | SQL (Jinja) |
 | **Bronze** | `spark.read` | `COPY INTO` | Streaming Table | Streaming Table | `cloudFiles` | Streaming Live Table | `read_files()` |
 | **Silver** | DataFrame API | CTAS | Materialized View | MV + expectations | `@dlt.table` | Live Table | dbt model |
-| **SCD2** | Manual MERGE | `MERGE INTO` | MERGE workaround | `APPLY CHANGES` | `dlt.apply_changes()` | `APPLY CHANGES` | dbt snapshot |
+| **SCD2** | Manual MERGE | `MERGE INTO` | MERGE workaround | `AUTO CDC INTO` | `create_auto_cdc_flow()` | `APPLY CHANGES` | dbt snapshot |
 | **Orchestration** | Job (3 tasks) | Job (3 tasks) | Job (2 tasks) | Pipeline | Pipeline | Pipeline | Job (1 dbt_task) |
 | **Data Quality** | Manual | Manual | Manual | `EXPECT` constraints | `expect_or_drop()` | `EXPECT` constraints | dbt tests |
 | **Incremental** | Manual | Manual | Auto (ST) | Auto (ST) | Auto (ST) | Auto (ST) | Manual |

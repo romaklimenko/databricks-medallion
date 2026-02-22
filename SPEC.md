@@ -242,15 +242,15 @@ Generate from min(order_date) to max(order_date) found in silver_orders, padded 
 - Single pipeline definition with SQL syntax
 - Use `CREATE OR REFRESH LIVE TABLE` for bronze/silver
 - Use `CREATE OR REFRESH LIVE TABLE` with expectations for data quality
-- Gold SCD2: use `APPLY CHANGES INTO` (SQL syntax)
+- Gold SCD2: use `AUTO CDC INTO` (SQL syntax)
 - Define expectations with `CONSTRAINT ... EXPECT ... ON VIOLATION DROP ROW`
 
 ### 5. Declarative Pipelines — Python (`approach_dpl_python`)
 
 - Single pipeline definition with Python/PySpark syntax
-- Use `@dlt.table` decorators
-- Use `dlt.expect_or_drop()` for data quality
-- Gold SCD2: use `dlt.apply_changes()` 
+- Use `@dp.table` decorators (`from pyspark import pipelines as dp`)
+- Use `dp.expect_or_drop()` for data quality
+- Gold SCD2: use `dp.create_auto_cdc_flow()`
 - Same logical flow as the SQL declarative pipeline, different syntax
 
 ### 6. Materialized Views + Streaming Tables (`approach_mv_st`)

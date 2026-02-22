@@ -3,9 +3,9 @@
 -- Full medallion pipeline defined as a single Declarative Pipeline (formerly DLT).
 -- Bronze: streaming tables from landing volume via read_files()
 -- Silver: materialized views with expectations, dedup, and transforms
--- Gold: dim_customer via APPLY CHANGES INTO (SCD TYPE 2), other dims + fact as MVs
+-- Gold: dim_customer via AUTO CDC INTO (SCD TYPE 2), other dims + fact as MVs
 --
--- Note: APPLY CHANGES produces __START_AT/__END_AT columns instead of
+-- Note: AUTO CDC produces __START_AT/__END_AT columns instead of
 -- valid_from/valid_to. __END_AT is NULL for current records (not 9999-12-31).
 --
 -- Pipeline configuration keys (set in bundle YAML):
@@ -189,8 +189,8 @@ WHERE _rn = 1;
 -- Gold Layer
 -- =============================================
 
--- ----- SCD2: dim_customer via APPLY CHANGES -----
--- The APPLY CHANGES target is an internal streaming table. A downstream MV
+-- ----- SCD2: dim_customer via AUTO CDC -----
+-- The AUTO CDC target is an internal streaming table. A downstream MV
 -- wraps it to add customer_sk and present a clean interface.
 -- TRACK HISTORY ON limits SCD2 triggers to the same columns as other approaches.
 
@@ -198,7 +198,8 @@ CREATE OR REFRESH STREAMING TABLE _scd2_dim_customer;
 
 -- COMMAND ----------
 
-APPLY CHANGES INTO
+CREATE FLOW scd2_dim_customer
+AS AUTO CDC INTO
   LIVE._scd2_dim_customer
 FROM (
   SELECT
