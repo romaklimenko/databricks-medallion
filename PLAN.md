@@ -137,7 +137,7 @@ Note: DLT/Declarative Pipelines generate `__START_AT`/`__END_AT` columns instead
 
 ---
 
-## Task 11: Final README + Cleanup
+## Task 11: Final README + Cleanup ✅
 
 **Files to modify:** `README.md`, `.gitignore`, `databricks.yml` (if needed)
 

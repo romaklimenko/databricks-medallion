@@ -4,17 +4,52 @@ A demonstration project comparing **seven different approaches** to implementing
 
 ## Architecture
 
-```
-CSV Files ──→ Bronze (raw + metadata) ──→ Silver (cleansed, typed) ──→ Gold (Kimball star schema)
+### Medallion Pipeline
+
+```mermaid
+flowchart LR
+    CSV["CSV Files<br/>(batch_1 + batch_2)"] --> Bronze["**Bronze**<br/>Raw + metadata"]
+    Bronze --> Silver["**Silver**<br/>Cleansed, typed, deduped"]
+    Silver --> Gold["**Gold**<br/>Kimball star schema"]
 ```
 
 ### Gold Layer — Dimensional Model
 
-```
-dim_customer (SCD2)  ←──  fact_order_line  ──→  dim_product (SCD1)
-                               │
-                               ▼
-                           dim_date
+```mermaid
+erDiagram
+    gold_fact_order_line }o--|| gold_dim_customer : "customer_sk"
+    gold_fact_order_line }o--|| gold_dim_product : "product_sk"
+    gold_fact_order_line }o--|| gold_dim_date : "order_date_key"
+
+    gold_dim_customer {
+        bigint customer_sk PK
+        int customer_id
+        date valid_from
+        date valid_to
+        boolean is_current
+    }
+    gold_dim_product {
+        bigint product_sk PK
+        int product_id
+        string category
+        decimal unit_price
+    }
+    gold_dim_date {
+        int date_key PK
+        date full_date
+        int year
+        int month
+    }
+    gold_fact_order_line {
+        bigint order_line_sk PK
+        int order_id
+        int line_id
+        bigint customer_sk FK
+        bigint product_sk FK
+        int order_date_key FK
+        int quantity
+        decimal line_amount
+    }
 ```
 
 ## Approaches
@@ -253,6 +288,19 @@ A SQL notebook at [src/validate.sql](src/validate.sql) compares gold-layer outpu
 
 Run: `databricks bundle run validate`
 
+## Approach Comparison
+
+| | Notebooks | SQL | MV+ST | DPL SQL | DPL Python | DLT | dbt |
+|---|---|---|---|---|---|---|---|
+| **Files** | 3 `.py` | 3 `.sql` | 2 `.sql` | 1 `.sql` | 1 `.py` | 1 `.sql` | ~20 |
+| **Language** | PySpark | SQL | SQL | SQL | Python | SQL | SQL (Jinja) |
+| **Bronze** | `spark.read` | `COPY INTO` | Streaming Table | Streaming Table | `cloudFiles` | Streaming Live Table | `read_files()` |
+| **Silver** | DataFrame API | CTAS | Materialized View | MV + expectations | `@dlt.table` | Live Table | dbt model |
+| **SCD2** | Manual MERGE | `MERGE INTO` | MERGE workaround | `APPLY CHANGES` | `dlt.apply_changes()` | `APPLY CHANGES` | dbt snapshot |
+| **Orchestration** | Job (3 tasks) | Job (3 tasks) | Job (2 tasks) | Pipeline | Pipeline | Pipeline | Job (1 dbt_task) |
+| **Data Quality** | Manual | Manual | Manual | `EXPECT` constraints | `expect_or_drop()` | `EXPECT` constraints | dbt tests |
+| **Incremental** | Manual | Manual | Auto (ST) | Auto (ST) | Auto (ST) | Auto (ST) | Manual |
+
 ## Configuration
 
 Bundle variables (set in `databricks.yml` or override at deploy time):
@@ -261,3 +309,52 @@ Bundle variables (set in `databricks.yml` or override at deploy time):
 |----------|---------|-------------|
 | `catalog_name` | `medallion` | Unity Catalog catalog (must be created via UI first) |
 | `environment` | `dev` | Deployment environment |
+| `warehouse_id` | auto-lookup | SQL warehouse ID (for MV/ST approach) |
+
+## Deployment Guide
+
+### 1. Prerequisites
+
+- Databricks workspace with **Unity Catalog** enabled
+- Databricks CLI v0.200+ with bundle support
+- The `medallion` catalog created manually in Catalog Explorer (the workspace requires a managed storage location, so `CREATE CATALOG` from notebooks fails)
+
+### 2. Deploy
+
+```bash
+# Deploy all resources (schemas, volumes, jobs, pipelines)
+databricks bundle deploy
+
+# Upload CSV data to the landing volume
+databricks bundle run setup
+```
+
+### 3. Run Approaches
+
+Each approach runs independently after setup. Run them in any order:
+
+```bash
+databricks bundle run approach_notebooks    # Approach 1
+databricks bundle run approach_sql          # Approach 2
+databricks bundle run approach_mv_st        # Approach 3
+databricks bundle run approach_dpl_sql      # Approach 4
+databricks bundle run approach_dpl_python   # Approach 5
+databricks bundle run approach_dlt          # Approach 6
+databricks bundle run approach_dbt          # Approach 7
+```
+
+### 4. Validate
+
+After all approaches have completed, run the validation notebook to confirm identical output:
+
+```bash
+databricks bundle run validate
+```
+
+### Development Mode
+
+The default target is `dev`, which adds a `dev_<username>_` prefix to all resource names (schemas, jobs, pipelines). This prevents conflicts between developers sharing a workspace. To deploy to production:
+
+```bash
+databricks bundle deploy -t prod
+```
