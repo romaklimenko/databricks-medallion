@@ -74,7 +74,7 @@ SCD2 strategy: compare batch_1 vs batch_2 customer snapshots from bronze, build 
 
 ---
 
-## Task 6: Approach 4 — Declarative Pipelines (SQL)
+## Task 6: Approach 4 — Declarative Pipelines (SQL) ✅
 
 **Files to create:** `src/dpl_sql/pipeline.sql`
 **Files to modify:** `databricks.yml`, `README.md`
@@ -88,7 +88,7 @@ Note: DLT/Declarative Pipelines generate `__START_AT`/`__END_AT` columns instead
 
 ---
 
-## Task 7: Approach 5 — Declarative Pipelines (Python)
+## Task 7: Approach 5 — Declarative Pipelines (Python) ✅
 
 **Files to create:** `src/dpl_python/pipeline.py`
 **Files to modify:** `databricks.yml`, `README.md`
@@ -99,13 +99,13 @@ Note: DLT/Declarative Pipelines generate `__START_AT`/`__END_AT` columns instead
 
 ---
 
-## Task 8: Approach 6 — Delta Live Tables with APPLY CHANGES
+## Task 8: Approach 6 — Delta Live Tables with APPLY CHANGES ✅
 
 **Files to create:** `src/dlt/pipeline.sql`
 **Files to modify:** `databricks.yml`, `README.md`
 
-- SQL-based DLT pipeline (for contrast with Python in Task 7)
-- Showcases `APPLY CHANGES` SCD2 capability
+- SQL-based DLT pipeline using classic DLT syntax (`CREATE STREAMING LIVE TABLE`, `CREATE LIVE TABLE`)
+- SCD2 via `APPLY CHANGES` sourced from `STREAM(LIVE.bronze_customers)` (contrast with Approach 4 which reads from volume)
 - Bundle: pipeline resource targeting `approach_dlt` schema
 
 ---

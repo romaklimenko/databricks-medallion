@@ -26,7 +26,7 @@ dim_customer (SCD2)  ←──  fact_order_line  ──→  dim_product (SCD1)
 | 3 | Materialized Views + Streaming Tables | `approach_mv_st` | Scheduled MERGE workaround | Done |
 | 4 | Declarative Pipelines (SQL) | `approach_dpl_sql` | APPLY CHANGES INTO | Done |
 | 5 | Declarative Pipelines (Python) | `approach_dpl_python` | dlt.apply_changes() | Done |
-| 6 | Delta Live Tables | `approach_dlt` | APPLY CHANGES | Planned |
+| 6 | Delta Live Tables | `approach_dlt` | APPLY CHANGES | Done |
 | 7 | dbt-core | `approach_dbt` | dbt snapshots | Planned |
 
 ## Prerequisites
@@ -194,6 +194,25 @@ A single Python file in [src/dpl_python/](src/dpl_python/) defining a complete D
 **Same SCD2 column behavior as Approach 4**: `__START_AT`/`__END_AT` instead of `valid_from`/`valid_to`.
 
 Run: `databricks bundle run approach_dpl_python`
+
+### Approach 6: Delta Live Tables (Classic DLT Syntax)
+
+A single SQL file in [src/dlt/](src/dlt/) using the **classic DLT SQL syntax** — the same pipeline runtime as Approaches 4/5 but with the original pre-rebrand keywords:
+
+| Modern (Approach 4) | Classic DLT (Approach 6) |
+|---|---|
+| `CREATE OR REFRESH STREAMING TABLE` | `CREATE STREAMING LIVE TABLE` |
+| `CREATE OR REFRESH MATERIALIZED VIEW` | `CREATE LIVE TABLE` |
+
+- **Bronze**: 4 streaming live tables from `STREAM read_files()`
+- **Silver**: 4 live tables with expectations — same dedup/transform logic as all other approaches
+- **Gold**:
+  - `dim_customer` — SCD2 via `APPLY CHANGES INTO ... STORED AS SCD TYPE 2`, sourced from `STREAM(LIVE.bronze_customers)` with inline transforms (contrast with Approach 4 which reads directly from the volume)
+  - `dim_product`, `dim_date`, `fact_order_line` — live tables
+
+**Same SCD2 column behavior as Approaches 4/5**: `__START_AT`/`__END_AT` instead of `valid_from`/`valid_to`.
+
+Run: `databricks bundle run approach_dlt`
 
 ## Configuration
 
