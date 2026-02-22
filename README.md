@@ -25,7 +25,7 @@ dim_customer (SCD2)  ←──  fact_order_line  ──→  dim_product (SCD1)
 | 2 | SQL with COPY INTO | `approach_sql` | MERGE INTO | Done |
 | 3 | Materialized Views + Streaming Tables | `approach_mv_st` | Scheduled MERGE workaround | Done |
 | 4 | Declarative Pipelines (SQL) | `approach_dpl_sql` | APPLY CHANGES INTO | Done |
-| 5 | Declarative Pipelines (Python) | `approach_dpl_python` | dlt.apply_changes() | Planned |
+| 5 | Declarative Pipelines (Python) | `approach_dpl_python` | dlt.apply_changes() | Done |
 | 6 | Delta Live Tables | `approach_dlt` | APPLY CHANGES | Planned |
 | 7 | dbt-core | `approach_dbt` | dbt snapshots | Planned |
 
@@ -178,6 +178,22 @@ A single SQL file in [src/dpl_sql/](src/dpl_sql/) defining a complete Declarativ
 **Key difference from other approaches**: APPLY CHANGES produces `__START_AT`/`__END_AT` columns instead of `valid_from`/`valid_to`. `__END_AT` is `NULL` for current records (not `9999-12-31`). The fact table join uses `order_date >= __START_AT AND (__END_AT IS NULL OR order_date < __END_AT)`.
 
 Run: `databricks bundle run approach_dpl_sql`
+
+### Approach 5: Declarative Pipelines (Python)
+
+A single Python file in [src/dpl_python/](src/dpl_python/) defining a complete Declarative Pipeline using the Python DLT API — same logical flow as Approach 4, different syntax:
+
+- **Bronze**: 4 streaming tables using `@dlt.table` with `spark.readStream.format("cloudFiles")` (Auto Loader)
+- **Silver**: 4 materialized views with `@dlt.expect_or_drop()` data quality expectations — dedup via PySpark `Window` + `row_number()`, type casting, standardization, `line_amount` derivation
+- **Gold**:
+  - `dim_customer` — SCD2 via `dlt.apply_changes()` with `stored_as_scd_type=2` and `track_history_column_list` limited to email, address, city, country, segment. A temporary streaming view feeds cleaned data; a MV wraps the SCD2 target to add `customer_sk`
+  - `dim_product` — SCD1, materialized view from silver
+  - `dim_date` — Generated from order date range, padded to full months
+  - `fact_order_line` — PySpark DataFrame joins with SCD2 range join
+
+**Same SCD2 column behavior as Approach 4**: `__START_AT`/`__END_AT` instead of `valid_from`/`valid_to`.
+
+Run: `databricks bundle run approach_dpl_python`
 
 ## Configuration
 
