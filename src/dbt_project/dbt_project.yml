@@ -1,0 +1,24 @@
+name: medallion_dbt
+version: '1.0.0'
+config-version: 2
+
+profile: medallion
+
+model-paths: ["models"]
+snapshot-paths: ["snapshots"]
+clean-targets: ["target", "dbt_packages"]
+
+vars:
+  catalog_name: medallion
+  landing_schema: landing
+  volume_name: raw_files
+  snapshot_batch: all
+
+models:
+  medallion_dbt:
+    bronze:
+      +materialized: table
+    silver:
+      +materialized: table
+    gold:
+      +materialized: table

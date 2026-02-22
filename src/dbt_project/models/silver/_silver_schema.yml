@@ -1,0 +1,36 @@
+version: 2
+
+models:
+  - name: silver_customers
+    description: Deduplicated, typed, standardized customers
+    columns:
+      - name: customer_id
+        tests:
+          - not_null
+          - unique
+
+  - name: silver_products
+    description: Deduplicated, typed products
+    columns:
+      - name: product_id
+        tests:
+          - not_null
+          - unique
+
+  - name: silver_orders
+    description: Deduplicated, typed orders
+    columns:
+      - name: order_id
+        tests:
+          - not_null
+          - unique
+
+  - name: silver_order_lines
+    description: Deduplicated, typed order lines with line_amount
+    columns:
+      - name: order_id
+        tests:
+          - not_null
+      - name: line_id
+        tests:
+          - not_null

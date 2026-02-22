@@ -1,0 +1,53 @@
+version: 2
+
+models:
+  - name: gold_dim_customer
+    description: "SCD2 customer dimension (from dbt snapshot)"
+    columns:
+      - name: customer_sk
+        tests:
+          - not_null
+          - unique
+      - name: customer_id
+        tests:
+          - not_null
+
+  - name: gold_dim_product
+    description: "SCD1 product dimension"
+    columns:
+      - name: product_sk
+        tests:
+          - not_null
+          - unique
+      - name: product_id
+        tests:
+          - not_null
+          - unique
+
+  - name: gold_dim_date
+    description: "Date dimension (Jan-Mar 2024)"
+    columns:
+      - name: date_key
+        tests:
+          - not_null
+          - unique
+
+  - name: gold_fact_order_line
+    description: "Order line fact table"
+    columns:
+      - name: order_line_sk
+        tests:
+          - not_null
+          - unique
+      - name: customer_sk
+        tests:
+          - not_null
+          - relationships:
+              to: ref('gold_dim_customer')
+              field: customer_sk
+      - name: product_sk
+        tests:
+          - not_null
+          - relationships:
+              to: ref('gold_dim_product')
+              field: product_sk

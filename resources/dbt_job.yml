@@ -1,0 +1,34 @@
+resources:
+  jobs:
+    approach_dbt:
+      name: "[${var.environment}] medallion-dbt"
+      tags:
+        project: medallion
+        approach: dbt
+      environments:
+        - environment_key: dbt_env
+          spec:
+            client: "1"
+            dependencies:
+              - dbt-databricks>=1.0.0,<2.0.0
+      tasks:
+        - task_key: dbt_run
+          environment_key: dbt_env
+          dbt_task:
+            project_directory: ../src/dbt_project
+            warehouse_id: ${var.warehouse_id}
+            catalog: ${var.catalog_name}
+            schema: ${resources.schemas.schema_approach_dbt.name}
+            commands:
+              # Step 1: Build bronze + silver (batch_1 only for customers)
+              - "dbt run --select bronze silver --vars '{catalog_name: ${var.catalog_name}, landing_schema: ${resources.schemas.schema_landing.name}, volume_name: ${resources.volumes.raw_files.name}, snapshot_batch: batch_1}'"
+              # Step 2: Capture initial customer state
+              - dbt snapshot
+              # Step 3: Rebuild silver_customers with all batches (batch_2 overwrites)
+              - "dbt run --select silver_customers --vars '{catalog_name: ${var.catalog_name}, landing_schema: ${resources.schemas.schema_landing.name}, volume_name: ${resources.volumes.raw_files.name}, snapshot_batch: all}'"
+              # Step 4: Detect customer changes → SCD2 history
+              - dbt snapshot
+              # Step 5: Build gold layer from snapshot + silver
+              - "dbt run --select gold --vars '{catalog_name: ${var.catalog_name}, landing_schema: ${resources.schemas.schema_landing.name}, volume_name: ${resources.volumes.raw_files.name}}'"
+              # Step 6: Run tests
+              - dbt test

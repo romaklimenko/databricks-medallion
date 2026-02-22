@@ -110,18 +110,18 @@ Note: DLT/Declarative Pipelines generate `__START_AT`/`__END_AT` columns instead
 
 ---
 
-## Task 9: Approach 7 — dbt-core
+## Task 9: Approach 7 — dbt-core ✅
 
-**Files to create:** ~20 files under `src/dbt_project/`
+**Files to create:** 20 files under `src/dbt_project/`
 **Files to modify:** `databricks.yml`, `README.md`
 
 - `dbt_project.yml`, `profiles.yml`
-- `models/bronze/` — read from volume via `read_files()`
-- `models/silver/` — transforms with `{{ ref() }}`, tests in `schema.yml`
-- `models/gold/` — dim/fact tables
+- `models/bronze/` — read from volume via `read_files()`, schema.yml with tests
+- `models/silver/` — dedup + transforms with `{{ ref() }}`, `snapshot_batch` variable for SCD2 workflow
+- `models/gold/` — dim/fact tables reading from snapshot + silver
 - `snapshots/snap_dim_customer.sql` — SCD2 via dbt snapshot (`strategy='check'`)
 - `gold_dim_customer.sql` maps dbt snapshot columns (`dbt_valid_from` → `valid_from`, etc.)
-- Bundle: workflow with `dbt_task` running deps → snapshot → run → test
+- Bundle: single dbt_task with 6 sequential commands (batch_1 run → snapshot → all run → snapshot → gold → test)
 
 ---
 

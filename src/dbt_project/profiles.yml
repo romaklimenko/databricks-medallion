@@ -1,0 +1,12 @@
+# Used for local development only.
+# When running via Databricks dbt_task, the connection is configured by the task.
+medallion:
+  target: dev
+  outputs:
+    dev:
+      type: databricks
+      catalog: "{{ env_var('DATABRICKS_CATALOG', 'medallion') }}"
+      schema: approach_dbt
+      host: "{{ env_var('DATABRICKS_HOST') }}"
+      http_path: "{{ env_var('DATABRICKS_HTTP_PATH') }}"
+      token: "{{ env_var('DATABRICKS_TOKEN') }}"

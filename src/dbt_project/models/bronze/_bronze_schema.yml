@@ -1,0 +1,37 @@
+version: 2
+
+models:
+  - name: bronze_customers
+    description: Raw customers from landing volume
+    columns:
+      - name: customer_id
+        tests:
+          - not_null
+      - name: _batch_id
+        tests:
+          - accepted_values:
+              values: ['batch_1', 'batch_2']
+
+  - name: bronze_products
+    description: Raw products from landing volume
+    columns:
+      - name: product_id
+        tests:
+          - not_null
+
+  - name: bronze_orders
+    description: Raw orders from landing volume
+    columns:
+      - name: order_id
+        tests:
+          - not_null
+
+  - name: bronze_order_lines
+    description: Raw order lines from landing volume
+    columns:
+      - name: order_id
+        tests:
+          - not_null
+      - name: line_id
+        tests:
+          - not_null

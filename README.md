@@ -27,7 +27,7 @@ dim_customer (SCD2)  ←──  fact_order_line  ──→  dim_product (SCD1)
 | 4 | Declarative Pipelines (SQL) | `approach_dpl_sql` | APPLY CHANGES INTO | Done |
 | 5 | Declarative Pipelines (Python) | `approach_dpl_python` | dlt.apply_changes() | Done |
 | 6 | Delta Live Tables | `approach_dlt` | APPLY CHANGES | Done |
-| 7 | dbt-core | `approach_dbt` | dbt snapshots | Planned |
+| 7 | dbt-core | `approach_dbt` | dbt snapshots | Done |
 
 ## Prerequisites
 
@@ -213,6 +213,31 @@ A single SQL file in [src/dlt/](src/dlt/) using the **classic DLT SQL syntax** �
 **Same SCD2 column behavior as Approaches 4/5**: `__START_AT`/`__END_AT` instead of `valid_from`/`valid_to`.
 
 Run: `databricks bundle run approach_dlt`
+
+### Approach 7: dbt-core
+
+A full dbt project in [src/dbt_project/](src/dbt_project/) using the `dbt-databricks` adapter:
+
+- **Bronze** (`models/bronze/`): 4 models using `read_files()` to ingest CSVs from the landing volume — same raw ingestion as other approaches
+- **Silver** (`models/silver/`): 4 models with dedup, type casting, standardization. `silver_customers` accepts a `snapshot_batch` variable to control which batches are included (enables the two-phase snapshot workflow)
+- **Gold** (`models/gold/`):
+  - `dim_customer` — SCD2 via **dbt snapshot** (`strategy='check'` on email, address, city, country, segment). The `gold_dim_customer` model reads from `snap_dim_customer` and maps `dbt_valid_from`/`dbt_valid_to` to `valid_from`/`valid_to`/`is_current`
+  - `dim_product` — SCD1 from silver
+  - `dim_date` — Generated from order date range, padded to full months
+  - `fact_order_line` — Joins silver tables to gold dimensions with SCD2 date-range lookup
+- **Tests** (`schema.yml`): `not_null`, `unique`, `accepted_values`, `relationships`
+
+**Workflow** (6 sequential dbt commands in one task):
+1. `dbt run --select bronze silver` with `snapshot_batch: batch_1` (silver_customers sees only batch 1)
+2. `dbt snapshot` (captures initial customer state)
+3. `dbt run --select silver_customers` with `snapshot_batch: all` (silver_customers now includes batch 2)
+4. `dbt snapshot` (detects changes → creates SCD2 history rows)
+5. `dbt run --select gold` (builds dimensional model from snapshot + silver)
+6. `dbt test` (validates all constraints)
+
+**Key difference**: `valid_from`/`valid_to` are dbt execution timestamps (not the fixed batch dates used by other approaches). Row counts are identical.
+
+Run: `databricks bundle run approach_dbt`
 
 ## Configuration
 
