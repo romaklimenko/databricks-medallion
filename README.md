@@ -75,7 +75,8 @@ databricks-medallion/
 │   ├── dpl_sql/                # Approach 4: Declarative Pipelines (SQL)
 │   ├── dpl_python/             # Approach 5: Declarative Pipelines (Python)
 │   ├── dlt/                    # Approach 6: Delta Live Tables
-│   └── dbt_project/            # Approach 7: dbt-core
+│   ├── dbt_project/            # Approach 7: dbt-core
+│   └── validate.sql            # Cross-approach validation
 └── README.md
 ```
 
@@ -235,9 +236,22 @@ A full dbt project in [src/dbt_project/](src/dbt_project/) using the `dbt-databr
 5. `dbt run --select gold` (builds dimensional model from snapshot + silver)
 6. `dbt test` (validates all constraints)
 
-**Key difference**: `valid_from`/`valid_to` are dbt execution timestamps (not the fixed batch dates used by other approaches). Row counts are identical.
+**Key difference**: `valid_from`/`valid_to` are derived from `_batch_id` (batch_1 → 2024-01-01, batch_2 → 2024-03-01) using `LEAD()` window function, since dbt snapshot timestamps reflect execution time, not business dates. Row counts are identical.
 
 Run: `databricks bundle run approach_dbt`
+
+## Validation
+
+A SQL notebook at [src/validate.sql](src/validate.sql) compares gold-layer output across all 7 approaches:
+
+1. **Row count validation** — verifies each gold table has the expected number of rows (dim_customer=8, dim_product=5, dim_date=91, fact_order_line=11) across all approaches
+2. **Content comparison: dim_product** — hashes business attributes (excluding surrogate keys) and verifies all approaches produce identical rows
+3. **Content comparison: dim_customer (SCD2)** — normalizes column names (`__START_AT` → `valid_from`, `__END_AT` → `valid_to` with NULL → 9999-12-31) for DPL/DLT approaches, then compares hashes per customer+valid_from
+4. **Content comparison: dim_date** — verifies all 91 date rows match across approaches (only shows mismatches)
+5. **Content comparison: fact_order_line** — compares measures and degenerate dimensions (skips surrogate keys which vary by approach)
+6. **Overall summary** — single pass/fail per table with list of any failing approaches
+
+Run: `databricks bundle run validate`
 
 ## Configuration
 

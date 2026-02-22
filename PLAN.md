@@ -125,7 +125,7 @@ Note: DLT/Declarative Pipelines generate `__START_AT`/`__END_AT` columns instead
 
 ---
 
-## Task 10: Validation Notebook
+## Task 10: Validation Notebook ✅
 
 **Files to create:** `src/validate.sql`
 **Files to modify:** `databricks.yml`, `README.md`

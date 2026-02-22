@@ -1,0 +1,20 @@
+resources:
+  jobs:
+    validate:
+      name: "[${var.environment}] medallion-validate"
+      tags:
+        project: medallion
+        approach: validate
+      tasks:
+        - task_key: validate
+          notebook_task:
+            notebook_path: ../src/validate.sql
+            base_parameters:
+              catalog_name: ${var.catalog_name}
+              schema_notebooks: ${resources.schemas.schema_approach_notebooks.name}
+              schema_sql: ${resources.schemas.schema_approach_sql.name}
+              schema_mv_st: ${resources.schemas.schema_approach_mv_st.name}
+              schema_dpl_sql: ${resources.schemas.schema_approach_dpl_sql.name}
+              schema_dpl_python: ${resources.schemas.schema_approach_dpl_python.name}
+              schema_dlt: ${resources.schemas.schema_approach_dlt.name}
+              schema_dbt: ${resources.schemas.schema_approach_dbt.name}
