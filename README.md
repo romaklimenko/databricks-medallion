@@ -81,6 +81,13 @@ git clone <repo-url>
 cd databricks-medallion
 uv sync
 
+# Configure your workspace
+cp .env.example .env
+# Edit .env and set DATABRICKS_HOST to your workspace URL
+
+# Generate databricks.yml from template
+python scripts/generate_databricks_yml.py
+
 # Deploy the bundle
 databricks bundle deploy
 
@@ -97,7 +104,10 @@ databricks bundle run approach_sql
 
 ```
 databricks-medallion/
-├── databricks.yml              # Databricks Asset Bundle config
+├── databricks.yml.tmpl         # Bundle config template (source of truth)
+├── .env.example                # Environment variable template
+├── scripts/
+│   └── generate_databricks_yml.py  # Generates databricks.yml from template + .env
 ├── pyproject.toml              # Python project (uv-managed)
 ├── data/
 │   ├── batch_1/                # Initial load (5 customers, 5 products, 7 orders, 10 lines)
@@ -303,7 +313,25 @@ Run: `databricks bundle run validate`
 
 ## Configuration
 
-Bundle variables (set in `databricks.yml` or override at deploy time):
+### Workspace Setup
+
+`databricks.yml` is **not checked into git** — it's generated from `databricks.yml.tmpl` + `.env`:
+
+```bash
+cp .env.example .env            # create your local .env
+# Edit .env with your workspace URL
+python scripts/generate_databricks_yml.py  # generates databricks.yml
+```
+
+The `.env` file supports:
+
+| Variable | Description |
+|----------|-------------|
+| `DATABRICKS_HOST` | Your Databricks workspace URL (e.g., `https://adb-xxx.azuredatabricks.net`) |
+
+### Bundle Variables
+
+Bundle variables (set in `databricks.yml.tmpl` or override at deploy time):
 
 | Variable | Default | Description |
 |----------|---------|-------------|
@@ -319,7 +347,15 @@ Bundle variables (set in `databricks.yml` or override at deploy time):
 - Databricks CLI v0.200+ with bundle support
 - The `medallion` catalog created manually in Catalog Explorer (the workspace requires a managed storage location, so `CREATE CATALOG` from notebooks fails)
 
-### 2. Deploy
+### 2. Generate Config
+
+```bash
+cp .env.example .env
+# Set DATABRICKS_HOST to your workspace URL
+python scripts/generate_databricks_yml.py
+```
+
+### 3. Deploy
 
 ```bash
 # Deploy all resources (schemas, volumes, jobs, pipelines)
@@ -329,7 +365,7 @@ databricks bundle deploy
 databricks bundle run setup
 ```
 
-### 3. Run Approaches
+### 4. Run Approaches
 
 Each approach runs independently after setup. Run them in any order:
 
@@ -343,7 +379,7 @@ databricks bundle run approach_dlt          # Approach 6
 databricks bundle run approach_dbt          # Approach 7
 ```
 
-### 4. Validate
+### 5. Validate
 
 After all approaches have completed, run the validation notebook to confirm identical output:
 

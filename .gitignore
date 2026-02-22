@@ -14,9 +14,11 @@ uv.lock
 # Environment
 .env
 .env.*
+!.env.example
 
 # Databricks
 .databricks/
+databricks.yml
 
 # dbt
 target/

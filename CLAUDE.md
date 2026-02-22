@@ -10,7 +10,8 @@ This is a Databricks Medallion Architecture comparison project. Read `SPEC.md` t
 - **No external dependencies** except dbt-databricks for the dbt approach.
 - **All approaches must produce identical gold-layer output** — same row counts, same values.
 - **CSV data is in `data/`** — do not modify these files. They are the source of truth.
-- **Bundle variables**: catalog name and environment must be configurable via `databricks.yml` variables.
+- **Bundle variables**: catalog name and environment must be configurable via `databricks.yml.tmpl` variables.
+- **`databricks.yml` is generated, not committed** — edit `databricks.yml.tmpl` instead. Run `python scripts/generate_databricks_yml.py` to regenerate after changes.
 
 ## Implementation Order
 
@@ -42,7 +43,7 @@ The SCD2 tracking columns for dim_customer are: `valid_from`, `valid_to` (9999-1
 
 ## What "Done" Looks Like
 
-1. `databricks.yml` deploys all schemas, volumes, workflows, and pipelines
+1. `databricks.yml.tmpl` + `scripts/generate_databricks_yml.py` produce `databricks.yml` which deploys all schemas, volumes, workflows, and pipelines
 2. Running the setup workflow creates schemas, volume, and uploads CSVs
 3. Each approach workflow can run independently after setup
 4. All seven gold layers contain identical data:
@@ -61,7 +62,7 @@ The SCD2 tracking columns for dim_customer are: `valid_from`, `valid_to` (9999-1
 
 ## Bundle Tagging Convention
 
-Every job and pipeline in `databricks.yml` must have these tags:
+Every job and pipeline in `databricks.yml.tmpl` (and resource YAML files) must have these tags:
 - `project: medallion` — shared across all resources
 - `approach: <name>` — identifies the specific approach (e.g., `setup`, `notebooks`, `sql`, `dbt`, `dpl_sql`, `dpl_python`, `mv_st`, `dlt`, `validate`)
 

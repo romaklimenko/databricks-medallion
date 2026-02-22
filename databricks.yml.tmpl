@@ -17,7 +17,7 @@ variables:
       warehouse: Serverless Starter Warehouse
 
 workspace:
-  host: https://adb-7405619682376916.16.azuredatabricks.net
+  host: ${DATABRICKS_HOST}
   root_path: /Users/${workspace.current_user.userName}/.bundle/${bundle.name}/${var.environment}
 
 sync:
